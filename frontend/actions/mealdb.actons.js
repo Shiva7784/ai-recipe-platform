@@ -4,7 +4,7 @@ const MEALDB_BASE = "https://www.themealdb.com/api/json/v1/1";
 
 export async function getRecipeOfTheDay() {
     try {
-        const response = await fetch(`${MEALDB_BASE}/random.php`, {
+        const response = await fetch(`${MEALDB_BASE}/random.php`,{
             next: { revalidate: 86400 },  // Cache for 24 hours
         });
 
@@ -26,7 +26,7 @@ export async function getRecipeOfTheDay() {
 
 export async function getCategories() {
     try {
-        const response = await fetch(` ${MEALDB_BASE}/list.php?c=list`, {
+        const response = await fetch(`${MEALDB_BASE}/list.php?c=list`, {
             next: { revalidate: 604800 }, // Cache for 1 week (categories rarely change)
         });
 
@@ -48,7 +48,7 @@ export async function getCategories() {
 
 export async function getAreas() {
     try {
-        const response = await fetch(` ${MEALDB_BASE}/list.php?a=list`, {
+        const response = await fetch(`${MEALDB_BASE}/list.php?a=list`, {
             next: { revalidate: 604800 }, // Cache for 1 week 
         });
 
@@ -70,7 +70,7 @@ export async function getAreas() {
 
 export async function getMealsByCategory(category) {
     try {
-        const response = await fetch(` ${MEALDB_BASE}/filter.php?c=${category}`, {
+        const response = await fetch(`${MEALDB_BASE}/filter.php?c=${category}`, {
             next: { revalidate: 86400 }, // Cache for 24 hours 
         });
 
@@ -93,7 +93,7 @@ export async function getMealsByCategory(category) {
 
 export async function getMealsByArea(area) {
     try {
-        const response = await fetch(` ${MEALDB_BASE}/filter.php?c=${area}`, {
+        const response = await fetch(` ${MEALDB_BASE}/filter.php?a=${area}`, {
             next: { revalidate: 86400 }, // Cache for 24 hours 
         });
 
