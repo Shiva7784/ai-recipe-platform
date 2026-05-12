@@ -14,7 +14,6 @@ export default function CategoryRecipesPage() {
             value={category}
             fetchAction={getMealsByCategory}
             backLink="/dashboard"
-        
         />
     )
 }

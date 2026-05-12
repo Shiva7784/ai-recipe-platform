@@ -229,42 +229,126 @@ export async function addPantryItemManually(formData) {
 
 export async function getPantryItems() {
     try {
+      const user = await checkUser();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+  
+      const response = await fetch(
+        `${STRAPI_URL}/api/pantry-items?filters[owner][id][$eq]=${user.id}&sort=createdAt:desc`,
+        {
+          headers: {
+            Authorization: `Bearer ${STRAPI_API_TOKEN}`,
+          },
+          cache: "no-store",
+        }
+      );
+  
+      if (!response.ok) {
+        throw new Error("Failed to fetch pantry items");
+      }
+  
+      const data = await response.json();
+  
+      const isPro = user.subscriptionTier === "pro";
+  
+      return {
+        success: true,
+        items: data.data || [],
+        scansLimit: isPro ? "unlimited" : 10,
+      };
+    } catch (error) {
+      console.error("Error fetching pantry:", error);
+      throw new Error(error.message || "Failed to load pantry");
+    }
+  }
+  
+
+export async function deletePantryItem(formData) {
+    try {
 
         const user = await checkUser();
         if(!user) {
             throw new Error("User not authenticated");
         }
 
-        const response = await fetch(`${{STRAPI_URL}}/api/pantry-items?filters[owner][id][$eq]=${user.id}&sort=createdAt:desc`, {
-            
-            headers: {
-                Authorization: `Bearer ${STRAPI_API_TOKEN}`,
-            },
-            cache: "no-store",
-        });
+        const itemId = formData.get("itemId");
+
+        const response = await fetch(
+            `${STRAPI_URL}/api/pantry-items/${itemId}`,
+            {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${STRAPI_API_TOKEN}`,
+                },
+            }
+        );
 
         if(!response.ok) {
-            console.error("Failed to add item:", errorText);
-            throw new Error("Failed to fetch pantry items");
+            console.error("Failed to delete item:", errorText);
+            throw new Error("Failed to delete pantry items");
         }
-
-        const data = await response.json();
-
-        const isPro = user.subscriptionTier === "pro";
 
         return {
             success: true,
-            item: data.data || [],
-            scansLimit: isPro ? "unlimited" : 10,
+            message: "Item removed from pantry",
         };
+
+
+
         
     } catch (error) {
-        console.error("Error fetching pantry", error);
-        throw new Error(error.message || "Failed to load pantry");
+        console.error("Error deleting item", error);
+        throw new Error(error.message || "Failed to delete item");
         
     }
 }
 
-export async function deletePantryItem(formData) {}
+export async function updatePantryItem(formData) {
+    try {
 
-export async function updatePantryItem(formData) {}
+        const user = await checkUser();
+        if(!user) {
+            throw new Error("User not authenticated");
+        }
+
+        const itemId = formData.get("itemId");
+        const name = formData.get("name");
+        const quantity = formData.get("quantity");
+
+        const response = await fetch(
+            `${STRAPI_URL}/api/pantry-items/${itemId}`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${STRAPI_API_TOKEN}`,
+                },
+                body: JSON.stringify({
+                    data: {
+                        name,
+                        quantity,
+                    },
+                }),
+            }
+        );
+
+        if(!response.ok) {
+            console.error("Failed to update item:", errorText);
+            throw new Error("Failed to update pantry items");
+        }
+
+        const data = await response.json();
+
+        return {
+            success: true,
+            item: data.data,
+            message: "Item updated successfully",
+        };
+
+    } catch (error) {
+        console.error("Error updating item", error);
+        throw new Error(error.message || "Failed to update item");
+        
+    }
+}
