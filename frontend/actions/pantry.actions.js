@@ -86,7 +86,7 @@ export async function scanPantryImage(formData) {
             prompt,
             {
                 inlineData: {
-                    mineType: imageFile.type,
+                    mimeType: imageFile.type,
                     data: base64Image,
                 }
             }
@@ -143,7 +143,7 @@ export async function saveToPantry(formData){
 
         const savedItems = [];
         for (const ingredient of ingredients) {
-            const response = await fetch(`${{STRAPI_URL}}/api/pantry-items`, {
+            const response = await fetch(`${STRAPI_URL}/api/pantry-items`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -192,7 +192,7 @@ export async function addPantryItemManually(formData) {
             throw new Error("Name and quantity are required");
         }
 
-        const response = await fetch(`${{STRAPI_URL}}/api/pantry-items`, {
+        const response = await fetch(`${STRAPI_URL}/api/pantry-items`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

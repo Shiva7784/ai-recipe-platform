@@ -1,34 +1,27 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import {
-  Dialog,
-  DialogClose,
+  Dialog,  
   DialogContent,
-  DialogDescription,
-  DialogFooter,
+  DialogDescription, 
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
-import { Camera, Plus } from 'lucide-react'
+import { BadgeAlertIcon, Camera, Check, Loader2, Plus, X } from 'lucide-react'
 import useFetch from '@/hooks/use-fetch'
 import { addPantryItemManually, saveToPantry, scanPantryImage } from '@/actions/pantry.actions'
+import { toast } from 'sonner'
+import ImageUploader from './ImageUploader'
+import { Badge } from './ui/badge'
 
 
 
@@ -43,8 +36,16 @@ function AddToPantryModal({ isOpen, onClose, onSuccess}) {
     const {
       loading: scanning,
       data: scanData,
-      fb: scanImage,
+      fn: scanImage,
     } = useFetch(scanPantryImage);
+
+    // Update scanned ingredients when scan completes
+    useEffect(() => {
+      if(scanData?.success && scanData?.ingredients) {
+        setScannnedIngredients(scanData.ingredients);
+        toast.success(`Found ${scanData.ingredients.length} ingredients!`);
+      }
+    },[scanData]);
 
     //Save scanned items
     const {
@@ -60,6 +61,16 @@ function AddToPantryModal({ isOpen, onClose, onSuccess}) {
       fn: addManualItem,
     } = useFetch(addPantryItemManually);
 
+    // Handle manual add success
+    useEffect(() => {
+      if(addData?.success){
+        toast.success("item added to pantry");
+        setManualItem({ name: " " , quantity: ""});
+        handleClose();
+        if(onSuccess) onSuccess();
+      }
+    },[addData]);
+
     const handleClose = () => {
         setActiveTab("scan");
         setSelectedImage(null);
@@ -68,16 +79,68 @@ function AddToPantryModal({ isOpen, onClose, onSuccess}) {
         onClose();
     }
 
-    const handleAddManual = () => {};
+    //Handle image selection
+    const handleImageSelect = (file) => {
+      setSelectedImage(file);
+      setScannnedIngredients([]);  //Reset when new image selected
+    };
+
+    
+    const handleAddManual = async (e) => {
+      e.preventDefault();
+      if(!manualItem.name.trim() || !manualItem.quantity.trim()) {
+        toast.error("Please fill in all fields");
+        return
+      }
+
+      const formData = new FormData();
+      formData.append("name", manualItem.name)
+      formData.append("quantity", manualItem.quantity);
+      await addManualItem(formData);
+
+    };
+
+      //Handle image scan
+      const handleScan = async () => {
+        if(!selectedImage) return;
+        const formData = new FormData();
+        formData.append("image",selectedImage);
+        await scanImage(formData);
+      }
+
+      const handleSaveScanned = async () => {
+        if(scannedIngredients.length === 0) {
+          toast.error("No ingredients to save");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("ingredients", JSON.stringify(scannedIngredients));
+        await saveScannedItems(formData);
+      };
+
+      useEffect(() =>{
+        if(saveData?.success) {
+          toast.success(saveData.message);
+          handleClose();
+          if(onSuccess)  onSuccess();
+        }
+      },[saveData])
+
+      const removeIngredient = (index) => {
+        setScannnedIngredients(scannedIngredients.filter((_, i) => i !== index));
+        
+      };
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="max-w-3xl mx-h-[90vh] overflow-y-auto rounded-none">
           <DialogHeader>
-            <DialogTitle>Edit profile</DialogTitle>
+            <DialogTitle className="text-2xl font-bold tracking-tight">
+              Add to Pantry
+            </DialogTitle>
             <DialogDescription>
-              Make changes to your profile here. Click save when you&apos;re
-              done.
+              Scan your pantry with AI or add items manually
             </DialogDescription>
           </DialogHeader>
 
@@ -93,7 +156,121 @@ function AddToPantryModal({ isOpen, onClose, onSuccess}) {
         </TabsTrigger>
       </TabsList>
       <TabsContent value="scan" className="space-y-6 mt-6">
-      AI scan
+      {scannedIngredients.length === 0 ? (
+      <div className='space-y-4'>
+        {/* Image Uploader */}
+        <ImageUploader
+          onImageSelect={handleImageSelect}
+          loading={scanning}
+        />
+
+        {selectedImage && !scanning && (
+          <Button
+            onClick={handleScan}
+            variant='primary'
+            className="w-full h-12 text-lg "
+            disabled={scanning}
+          >
+            {scanning ? (
+              <>
+              <Loader2 className='w-5 h-5 mr-2 animate-spin'/>
+              Analyzing...
+              </>
+            ) : (
+              <>
+                <Camera className='w-5 h-5 mr-2'/>
+                Scan Image
+              </>
+            )}
+
+          </Button>
+        )}
+        
+      </div>) : (
+         <div className='space-y-4'>
+          <div className='flex items-center justify-between'>
+            <div>
+              <h3 className='text-lg font-bold text-stone-900'>
+                Review Detected Items
+              </h3>
+              <p className='text-sm text-stone-600'>
+                Found {scannedIngredients.length} ingredients
+              </p>
+            </div>
+
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => {
+                setScannnedIngredients([])
+                setSelectedImage(null);
+              }}
+              className="gap-2"
+            >
+              <Camera className='w-4 h-4'/>
+              Scan Again
+            </Button>
+          </div>
+
+          <div className='space-y-3 max-h-96 overflow-y-auto'>
+            {scannedIngredients.map((ingredient, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-3 p-4 bg-stone-50 rounded-xl border border-stone-200"
+              > 
+                <div className='flex-1'>
+                  <div className='font-medium text-stone-900'>
+                    {ingredient.name}
+                  </div>
+                  <div className='text-sm text-stone-500'>
+                    {ingredient.quantity || "Quantity not detected"}
+                  </div>
+                </div>
+
+                {ingredient.confidence && (
+                  <Badge
+                    variant="outline"
+                    className='text-sm text-green-700 border-green-200'
+                  >
+                    {Math.round(ingredient.confidence * 100)}%
+                  </Badge>
+
+                )}
+
+                <Button
+                  size='sm'
+                  variant='ghost'
+                  onClick={() => removeIngredient(index)}
+                  className="text-stone-600 hover:text-red-600"
+                >
+                  <X className='w-3 h-4'/>
+                </Button>
+              </div>
+            ))}
+
+          </div>
+
+          {/* save Button */}
+          <Button
+            onClick={handleSaveScanned}
+            disabled={saving || scannedIngredients.length === 0 }
+            className="flex-1 bg-green-600 hover:bg-green-700 text-white h-12 w-full"
+          >
+            {saving ? (
+              <>
+                  <Loader2 className='w-5 h-5 mr-2 animate-spin'/>
+                  Saving...
+              </>
+            ) : (
+              <>
+                  <Check className='w-5 h-5 mr-2' />
+                  Save {scannedIngredients.length} Items to Pantry
+              </>
+            )}
+
+          </Button>
+         </div>
+         )}
         
       </TabsContent>
       <TabsContent value="manual" className="mt-6">
@@ -111,6 +288,42 @@ function AddToPantryModal({ isOpen, onClose, onSuccess}) {
               disabled={adding}
             />
           </div>
+
+          <div>
+            <label className='block text-sm font-medium text-stone-700 mb-2'>
+              Quantity
+            </label>
+            <input
+              type='text'
+              value={manualItem.quantity}
+              onChange={(e) => setManualItem({ ...manualItem, quantity: e.target.value})}
+              placeholder='e.g., 500g , 2 cups , 3 pieces '
+              className='w-full px-4 py-3 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500'
+              disabled={adding}
+            />
+          </div>
+
+          <Button
+            type="submit"
+            disabled={adding}
+            variant='primary'
+            className="flex-1 h-12 w-full"
+          >
+            {adding ? (
+              <>
+              <Loader2 className='w-5 h-5 mr-2 animate-spin'/>
+              Adding...
+              </>
+            ) : (
+              <>
+              <Plus className='w-5 h-5 mr-2'/>
+              Add Item
+              </>
+            )}
+
+          </Button>
+
+          
         </form>
        
       </TabsContent>
