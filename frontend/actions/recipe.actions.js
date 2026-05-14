@@ -2,6 +2,7 @@
 
 import { freeMealRecommendations, proTierLimit } from "@/lib/arcjet";
 import { checkUser } from "@/lib/checkUser";
+import { DUMMY_RECIPE_RESPONSE } from "@/lib/dummy";
 import { request } from "@arcjet/next";
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -129,7 +130,7 @@ export async function getRecipesByPantryIngredients() {
             recipes: recipeSuggestions,
             ingredientUsed: ingredients,
             recommendationLimit: isPro ? "unlimited" : 5,
-            message: `Found ${recipeSuggestions.length} recipes you acn make`,
+            message: `Found ${recipeSuggestions.length} recipes you can make`,
         };
         
     } catch (error) {
@@ -139,3 +140,194 @@ export async function getRecipesByPantryIngredients() {
 
 
 }
+
+// Helper function to normalize recipe title
+function normalizeTitle(title) {
+  return title
+    .trim()
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+// Helper function to fetch image from Unsplash
+export async function fetchRecipeImage(recipeName) {}
+
+// Get or generate recipe details
+export async function getOrGenerateRecipe(formData) {
+  try {
+    const user = await checkUser();
+
+        if(!user) {
+            throw new Error("User not authenticated");
+        }
+
+        const recipeName = formData.get("recipeName");
+        if(!recipeName) {
+          throw new Error("Recipe name is required");
+        }
+
+        // Normalize the title (e.g., "apple cake" => "Apple Cake")
+        const normalizedTitle = normalizeTitle(recipeName);
+
+        // Step 1: Check if recipe already exists in DB (case-insensitive search)
+
+        // Step 2: Recipe doesn't exist , generate with gemini
+
+        // Step 3: Fetch image from Unsplash
+
+        // Step 4: Save generate recipe to database
+
+        return DUMMY_RECIPE_RESPONSE;
+
+    
+  } catch (error) {
+        console.error("❌ Error in getOrGenerateRecipe:", error);
+        throw new Error(error.message || "Failed to Load recipe");
+    
+  }
+}
+
+
+// Save recipe to user's collection (bookmark)
+export async function saveRecipeToCollection(formData) {
+  try {
+        const user = await checkUser();
+
+        if(!user) {
+            throw new Error("User not authenticated");
+        }
+
+        const recipeId = formData.get("recipeId");
+        if(!recipeId) {
+          throw new Error("Recipe ID is required");
+        }
+
+        // Check if already saved 
+        const existingResponse = await fetch(
+          `${STRAPI_URL}/api/saved-recipes?filters[user][id][$eq]=${user.id}&filters[recipe][id][$eq]=${recipeId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${STRAPI_API_TOKEN}`,
+            },
+            cache: "no-store",
+          }
+        );
+
+        if(existingResponse.ok){
+          const existingData = await existingResponse.json();
+          if(existingData.data && existingData.data.length > 0 ) {
+            return {
+              success: true,
+              alreadySaved: true,
+              message: "Recipe is already in your collection"
+            }
+          }
+        }
+
+        // Create saved recipe relation
+        const saveResponse = await fetch(`${STRAPI_URL}/api/saved-recipes`,{
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${STRAPI_API_TOKEN}`
+          },
+          body: JSON.stringify({
+            data: {
+              user: user.id,
+              recipe: recipeId,
+              savedAt: new Date().toISOString(),
+            },
+          }),
+        });
+
+        if(!saveResponse.ok) {
+          const errorText = await saveResponse.text();
+          console.error("❌ Error in save recipe",errorText);
+          throw new Error("Failed to save recipe to collection");
+        }
+
+        const savedRecipe = await saveResponse.json();
+
+        return {
+          success: true,
+          alreadySaved: false,
+          savedRecipe: savedRecipe.data,
+          message: "Recipe saved to your collection!",
+        };
+    
+  } catch (error) {
+        console.error("❌ Error saving recipe to collection", error);
+        throw new Error(error.message || "Failed to save recipe");
+  }
+}
+
+// Remove recipe from user's collection (unbookmark)
+export async function removeRecipeFromCollection(formData) {
+  try {
+    const user = await checkUser();
+
+        if(!user) {
+            throw new Error("User not authenticated");
+        }
+
+        const recipeId = formData.get("recipeId");
+        if(!recipeId) {
+          throw new Error("Recipe ID is required");
+        }
+
+         // Find saved reicpe relation
+        const searchResponse = await fetch(
+          `${STRAPI_URL}/api/saved-recipes?filters[user][id][$eq]=${user.id}&filters[recipe][id][$eq]=${recipeId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${STRAPI_API_TOKEN}`,
+            },
+            cache: "no-store",
+          }
+        );
+
+        if (!searchResponse) {
+          throw new Error("Failed to find saved recipe")
+        }
+
+        const searchData = await searchResponse.json();
+        
+        if(!searchData.data || searchData.data.length === 0) {
+          return {
+            success: true,
+            message: "Recipe was not in your collection",
+          };
+        }
+
+        //Delete saved recipe relation
+        const savedRecipeId = searchData.data[0].id;
+        const deleteRespnnse = await fetch(
+          `${STRAPI_URL}/api/saved-recipes/${savedRecipeId}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${STRAPI_API_TOKEN}`,
+            },
+
+          }
+        )
+
+        if(!deleteRespnnse.ok) {
+          throw new Error("Failed to remove recipe from collection");
+        }
+
+        return {
+          success: true,
+          message: "Recipe removed from your collection",
+        }
+
+
+    
+  } catch (error) {
+        console.error("❌ Error removing recipe to collection", error);
+        throw new Error(error.message || "Failed to remove recipe");
+    
+  }
+}
+

@@ -1,10 +1,10 @@
 import PricingSection from "@/components/PricingSection";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { FEATURES, HOW_IT_WORKS_STEPS, SITE_STATS } from "@/lib/data";
 import { auth } from "@clerk/nextjs/server";
-import { ArrowRight, Clock, Flame, Star, StarIcon, Users } from "lucide-react";
+import { ArrowRight, Clock, Flame, StarIcon, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
