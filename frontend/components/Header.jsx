@@ -8,6 +8,7 @@ import UserDropdown from './UserDropdown'
 import { checkUser } from '@/lib/checkUser.js'
 import PricingModal from './PricingModal'
 import { Badge } from './ui/badge'
+import HowToCookModal from './HowToCookModal'
 
 
 const Header = async () => {
@@ -54,6 +55,7 @@ const Header = async () => {
             <Show when="signed-in">
 
               {/* how to cook  */}
+              <HowToCookModal/>
 
               {user && <PricingModal 
               subscriptionTier={user.subscriptionTier}>

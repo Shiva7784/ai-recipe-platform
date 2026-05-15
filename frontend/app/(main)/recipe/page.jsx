@@ -60,6 +60,7 @@ function RecipeContent() {
 
     //Handle remove success
     useEffect(() => {
+        console.log("removed the data from saved recipe table ", removeData)
         if (removeData?.success) {
             setIsSaved(false);
             toast.success("Recipe removed from collection");
@@ -70,7 +71,7 @@ function RecipeContent() {
         if (!recipeId) return;
 
         const formData = new FormData();
-        formData.append("recipeId", recipeData);
+        formData.append("recipeId", recipeId);
 
         if (isSaved) {
             await removeFromCollection(formData);
