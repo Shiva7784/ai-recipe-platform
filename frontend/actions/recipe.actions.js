@@ -212,7 +212,7 @@ export async function getOrGenerateRecipe(formData) {
 
         // Step 1: Check if recipe already exists in DB (case-insensitive search)
         const searchResponse = await fetch(
-          `${STRAPI_URL}/api/saved-recipes?filters[title][$eqi]=${encodeURIComponent(normalizedTitle)}&populate=*`,
+          `${STRAPI_URL}/api/recipes?filters[title][$eqi]=${encodeURIComponent(normalizedTitle)}&populate=*`,
           {
             headers: {
               Authorization: `Bearer ${STRAPI_API_TOKEN}`,
@@ -220,9 +220,10 @@ export async function getOrGenerateRecipe(formData) {
             cache: "no-store",
           }
         );
-
+        console.log("search response ",searchResponse);
         if(searchResponse.ok) {
           const searchData = await searchResponse.json();
+          
 
           if(searchData.data && searchData.data.length > 0) {
             // Check if user has saved this recipe
@@ -237,8 +238,10 @@ export async function getOrGenerateRecipe(formData) {
             );
 
             let isSaved = false;
+            console.log("saved recipe data",savedRecipeResponse);
             if(savedRecipeResponse.ok) {
               const savedData = await savedRecipeResponse.json();
+              
               isSaved = savedData.data && savedData.data.length > 0;
             }
 
@@ -418,73 +421,82 @@ Guidelines:
 // Save recipe to user's collection (bookmark)
 export async function saveRecipeToCollection(formData) {
   try {
-        const user = await checkUser();
+    const user = await checkUser();
 
-        if(!user) {
-            throw new Error("User not authenticated");
-        }
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
 
-        const recipeId = formData.get("recipeId");
-        if(!recipeId) {
-          throw new Error("Recipe ID is required");
-        }
+    // FIX HERE
+    const recipeId = Number(formData.get("recipeId"));
 
-        // Check if already saved 
-        const existingResponse = await fetch(
-          `${STRAPI_URL}/api/saved-recipes?filters[user][id][$eq]=${user.id}&filters[recipe][id][$eq]=${recipeId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${STRAPI_API_TOKEN}`,
-            },
-            cache: "no-store",
-          }
-        );
+    console.log("recipeId:", recipeId);
+    console.log("typeof recipeId:", typeof recipeId);
 
-        if(existingResponse.ok){
-          const existingData = await existingResponse.json();
-          if(existingData.data && existingData.data.length > 0 ) {
-            return {
-              success: true,
-              alreadySaved: true,
-              message: "Recipe is already in your collection"
-            }
-          }
-        }
+    if (!recipeId) {
+      throw new Error("Recipe ID is required");
+    }
 
-        // Create saved recipe relation
-        const saveResponse = await fetch(`${STRAPI_URL}/api/saved-recipes`,{
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${STRAPI_API_TOKEN}`
-          },
-          body: JSON.stringify({
-            data: {
-              user: user.id,
-              recipe: recipeId,
-              savedAt: new Date().toISOString(),
-            },
-          }),
-        });
+    // Check if already saved
+    const existingResponse = await fetch(
+      `${STRAPI_URL}/api/saved-recipes?filters[user][id][$eq]=${user.id}&filters[recipe][id][$eq]=${recipeId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${STRAPI_API_TOKEN}`,
+        },
+        cache: "no-store",
+      }
+    );
 
-        if(!saveResponse.ok) {
-          const errorText = await saveResponse.text();
-          console.error("❌ Error in save recipe",errorText);
-          throw new Error("Failed to save recipe to collection");
-        }
+    if (existingResponse.ok) {
+      const existingData = await existingResponse.json();
 
-        const savedRecipe = await saveResponse.json();
-
+      if (existingData.data && existingData.data.length > 0) {
         return {
           success: true,
-          alreadySaved: false,
-          savedRecipe: savedRecipe.data,
-          message: "Recipe saved to your collection!",
+          alreadySaved: true,
+          message: "Recipe is already in your collection",
         };
-    
+      }
+    }
+
+    // Create relation
+    const saveResponse = await fetch(
+      `${STRAPI_URL}/api/saved-recipes`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${STRAPI_API_TOKEN}`,
+        },
+        body: JSON.stringify({
+          data: {
+            user: user.id,
+            recipe: recipeId,
+            savedAt: new Date().toISOString(),
+          },
+        }),
+      }
+    );
+
+    const responseData = await saveResponse.json();
+
+    console.log("STRAPI RESPONSE:", responseData);
+
+    if (!saveResponse.ok) {
+      console.error(responseData);
+      throw new Error("Failed to save recipe");
+    }
+
+    return {
+      success: true,
+      alreadySaved: false,
+      savedRecipe: responseData.data,
+      message: "Recipe saved successfully",
+    };
   } catch (error) {
-        console.error("❌ Error saving recipe to collection", error);
-        throw new Error(error.message || "Failed to save recipe");
+    console.error(error);
+    throw new Error(error.message || "Failed to save recipe");
   }
 }
 
@@ -558,5 +570,52 @@ export async function removeRecipeFromCollection(formData) {
         throw new Error(error.message || "Failed to remove recipe");
     
   }
+}
+
+// Get user's saved recipes
+export async function getSavedRecipes() {
+  try {
+    const user = await checkUser();
+
+        if(!user) {
+            throw new Error("User not authenticated");
+        }
+
+        // Fetch saved recipes with populated recipe data
+    const response = await fetch(
+      `${STRAPI_URL}/api/saved-recipes?filters[user][id][$eq]=${user.id}&populate[recipe][populate]=*&sort=savedAt:desc`,
+      {
+        headers: {
+          Authorization: `Bearer ${STRAPI_API_TOKEN}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+
+    if (!response.ok) {
+      throw new Error("Failed to find saved recipe")
+    }
+
+    const data = await response.json();
+
+    console.log(data.data);
+
+    // Extract recipes from saved recipes relation
+    const recipes = data.data
+          .map((savedRecipe) => savedRecipe.recipe)
+          .filter(Boolean); // Remove any null recipes
+    
+    return {
+      success: true,
+      recipes,
+      count: recipes.length,
+    };
+
+  } catch (error) {
+    console.error("❌ Error fetching saved recipes:", error);
+    throw new Error(error.message || "Failed to load saved recipes");
+  }
+
 }
 

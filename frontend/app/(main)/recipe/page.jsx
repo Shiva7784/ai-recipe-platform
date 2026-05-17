@@ -22,6 +22,9 @@ function RecipeContent() {
     const [recipeId, setRecipeId] = useState(null);
     const [isSaved, setIsSaved] = useState(false);
 
+    console.log("recipe id" , recipeId);
+    console.log("typeof recipeId:", typeof recipeId);
+
     // Get or generate recipe
     const {
         loading: loadingRecipe,
@@ -96,7 +99,9 @@ function RecipeContent() {
             setRecipeId(recipeData.recipeId);
             setIsSaved(recipeData.isSaved);
 
-            if(recipeData.fromDatabase) {
+            console.log("this is data from recipe data",recipeData);
+
+            if(recipeData.formDatabase) {
                 toast.success("Recipe loaded from database"); 
             } else {
                 toast.success("New recipe generated and saved!");
