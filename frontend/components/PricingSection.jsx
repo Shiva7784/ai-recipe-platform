@@ -138,7 +138,7 @@ export default function PricingSection({ subscriptionTier = "free" }) {
 
       <Show when="signed-out">
         <SignInButton mode="modal">
-          <Button className="w-full">
+          <Button variant="primary" className="w-full">
             Login to Subscribe
           </Button>
         </SignInButton>
