@@ -246,11 +246,13 @@ export async function getOrGenerateRecipe(formData) {
             }
 
             return {
+
               success: true,
               recipe: searchData.data[0],
               recipeId: searchData.data[0].id,
               isSaved: isSaved,
               formDatabase: true,
+              isPro,
               message: "Recipe loaded from database",
             }
           }
@@ -408,6 +410,7 @@ Guidelines:
           isSaved: false,
           formDatabase: false,
           recommendationsLimit: isPro ? "unlimited" : 5,
+          isPro,
           message: "Recipe generated and saved successfully!",
         };
   } catch (error) {

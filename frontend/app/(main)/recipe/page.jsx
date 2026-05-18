@@ -1,5 +1,6 @@
 "use client"
 import { getOrGenerateRecipe, removeRecipeFromCollection, saveRecipeToCollection } from '@/actions/recipe.actions';
+import ProLockedSection from '@/components/ProLockedSection';
 import { RecipePDF } from '@/components/RecipePDF';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -371,6 +372,11 @@ function RecipeContent() {
                                         Nutrition (per serving)
                                     </h3>
 
+                                    <ProLockedSection
+                                        isPro={recipeData.isPro}
+                                        lockText="Nutrition info is Pro-only"
+                                    >
+
                                     <div className='grid grid-cols-2 gap-3'>
                                         <div className='bg-orange-50 p-3 text-center border-2 border-orange-100'>
                                             <div className='text-2xl font-bold text-orange-600'>
@@ -408,6 +414,8 @@ function RecipeContent() {
                                             </div>
                                         </div>
                                     </div>
+
+                                    </ProLockedSection>
 
                                 </div>
                             )}
@@ -486,8 +494,20 @@ function RecipeContent() {
                     <h2 className="text-2xl font-bold text-stone-900 mb-4 flex items-center gap-2">
                     <Lightbulb className="w-6 h-6 text-orange-600 fill-orange-600" />
                     Chef&apos;s Tips & Tricks
+                    {!recipeData.isPro && (
+                    <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold">
+                      PRO
+                    </span>
+                     )}
 
-                </h2>
+                    </h2>
+
+                    <ProLockedSection
+                    isPro={recipeData.isPro}
+                    lockText="Chef tips are Pro-only"
+                    ctaText="Unlock Pro Tips →"
+                    >
+
 
                 <ul className="space-y-3">
                     {recipe.tips.map((tip, i) => (
@@ -500,6 +520,8 @@ function RecipeContent() {
                     </li>
                     ))}
                 </ul>
+
+                </ProLockedSection>
 
                 </div>
 
@@ -517,6 +539,10 @@ function RecipeContent() {
                   use:
                 </p>
 
+                <ProLockedSection
+                  isPro={recipeData.isPro}
+                  lockText="Substitutions are Pro-only"
+                >
                   <div className="space-y-4">
                     {recipe.substitutions.map((sub, i) => (
                       <div
@@ -544,6 +570,7 @@ function RecipeContent() {
                       </div>
                     ))}
                   </div>
+                  </ProLockedSection>
               </div>
             )}
 

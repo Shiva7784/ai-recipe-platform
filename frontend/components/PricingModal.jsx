@@ -20,7 +20,7 @@ function PricingModal({ subscriptionTier = "free"  ,children}) {
           <DialogTrigger asChild disabled={!canOpen}>
               {children}
           </DialogTrigger>
-          <DialogContent className="p-8 pt-4 sm:max-w-4xl">
+          <DialogContent className="p-8 pt-4 sm:max-w-3xl">
             <DialogTitle/>
             
             <PricingSection />
